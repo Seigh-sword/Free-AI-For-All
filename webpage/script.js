@@ -2,6 +2,9 @@ import { AIHandler } from '../AIHandler/AIHandler.js';
 
 const coco = new AIHandler();
 const libraryGrid = document.getElementById('library-grid');
+const loader = document.getElementById('loader');
+const userInput = document.getElementById('userInput');
+const chat = document.getElementById('chat');
 
 // --- 1. LOCAL STORAGE LIBRARY ---
 function saveToLibrary(url) {
@@ -12,6 +15,7 @@ function saveToLibrary(url) {
 }
 
 function updateLibraryUI() {
+    if(!libraryGrid) return;
     const images = JSON.parse(localStorage.getItem('coco_library') || '[]');
     libraryGrid.innerHTML = images.map(img => `
         <div class="lib-card">
@@ -22,54 +26,105 @@ function updateLibraryUI() {
 
 // --- 2. DOWNLOAD ENGINE ---
 window.downloadImage = async (url, format) => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `CoCo_Art_${Date.now()}.${format}`;
-    link.click();
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `CoCo_Art_${Date.now()}.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (e) {
+        console.error("Download failed:", e);
+        alert("Could not download image. Try right-clicking it!");
+    }
 };
 
-// --- 3. CHAT LOGIC WITH REVEAL ---
+// --- 3. CHAT LOGIC ---
 async function handleAction() {
-    const prompt = document.getElementById('userInput').value.trim();
+    const prompt = userInput.value.trim();
     if (!prompt) return;
 
     appendMessage('user', prompt);
-    document.getElementById('userInput').value = "";
-    document.getElementById('loader').classList.remove('hidden');
+    userInput.value = "";
+    loader.classList.remove('hidden');
 
     try {
         if (prompt.startsWith('/image')) {
-            const resultUrl = await coco.img.prompt(prompt.replace('/image', '')).generate();
+            const cleanPrompt = prompt.replace('/image', '').trim();
+            const resultUrl = await coco.img.prompt(cleanPrompt).set.model('flux').generate();
             
-            // Append Image with Reveal
+            // Generate unique ID for reveal animation
             const imgId = 'img-' + Date.now();
+            
             appendMessage('ai', `<div class="img-container">
                 <img id="${imgId}" src="${resultUrl}" class="gen-img">
                 <div class="dl-btns">
-                    <button onclick="downloadImage('${resultUrl}', 'jpg')">JPG</button>
-                    <button onclick="downloadImage('${resultUrl}', 'png')">PNG</button>
+                    <button onclick="downloadImage('${resultUrl}', 'jpg')">Save JPG</button>
                 </div>
             </div>`, 'html');
 
             // Trigger Slow Reveal
-            setTimeout(() => document.getElementById(imgId).classList.add('revealed'), 100);
+            setTimeout(() => {
+                const imgEl = document.getElementById(imgId);
+                if(imgEl) imgEl.classList.add('revealed');
+            }, 100);
+            
             saveToLibrary(resultUrl);
         } else {
-            const res = await coco.txt.prompt(prompt).generate();
+            // Text Mode
+            const res = await coco.txt.prompt(prompt).set.model('openai').generate();
             appendMessage('ai', res);
         }
-    } catch (e) { console.error(e); }
-    finally { document.getElementById('loader').classList.add('hidden'); }
+    } catch (e) { 
+        console.error(e);
+        appendMessage('ai', "CoCo tripped over a root! Please try again.");
+    } finally { 
+        loader.classList.add('hidden'); 
+        userInput.focus();
+    }
 }
 
-// --- 4. PANEL NAVIGATION ---
+// --- 4. THE MISSING FUNCTION (Fixed!) ---
+function appendMessage(sender, content, type = 'text') {
+    const msg = document.createElement('div');
+    msg.className = `msg ${sender}`;
+    
+    // CoCo Icon
+    const iconHTML = sender === 'ai' ? 
+        `<img src="https://raw.githubusercontent.com/Seigh-sword/Free-AI-For-All/refs/heads/main/assets/CoCoAiIcon.png" class="ai-icon">` : '';
+
+    if (type === 'html') {
+        msg.innerHTML = `${iconHTML}<div>${content}</div>`;
+    } else {
+        msg.innerHTML = `${iconHTML}<span>${content}</span>`;
+    }
+    
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+}
+
+// --- 5. PANEL NAVIGATION ---
+// We attach these to 'window' so HTML onclick="" works
 window.showPanel = (type) => {
     document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
-    if(type !== 'chat') document.getElementById(`${type}-panel`).classList.remove('hidden');
+    const target = document.getElementById(`${type}-panel`);
+    if(target) target.classList.remove('hidden');
 };
-window.hidePanels = () => document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
 
+window.hidePanels = () => {
+    document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
+};
+
+window.clearLibrary = () => {
+    if(confirm("Delete all saved images?")) {
+        localStorage.removeItem('coco_library');
+        updateLibraryUI();
+    }
+};
+
+// Init
 document.getElementById('sendBtn').onclick = handleAction;
-updateLibraryUI(); // Initialize library on load
+userInput.onkeydown = (e) => { if(e.key === 'Enter') handleAction(); };
+updateLibraryUI();
