@@ -1,4 +1,3 @@
-// webpage/script.js
 import { AIHandler } from '../AIHandler/AIHandler.js'; 
 
 const coco = new AIHandler();
@@ -6,32 +5,40 @@ const chat = document.getElementById('chat');
 const input = document.getElementById('userInput');
 const btn = document.getElementById('sendBtn');
 const loader = document.getElementById('loader');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
 
 async function handleAction() {
     const prompt = input.value.trim();
     if (!prompt) return;
 
-    // 1. Clear input and show loading
+    // UI Feedback
     appendMessage('user', prompt);
     input.value = "";
     loader.classList.remove('hidden');
+    statusDot.classList.add('active');
+    statusText.innerText = "Processing...";
 
     try {
         let result;
-        if (prompt.startsWith('/image')) {
-            const cleanPrompt = prompt.replace('/image', '').trim();
-            // Using Flux for best 2025 image quality
+        // Multimodal Logic
+        if (prompt.toLowerCase().startsWith('/image')) {
+            const cleanPrompt = prompt.replace(/\/image/i, '').trim();
             result = await coco.img.prompt(cleanPrompt).set.model('flux').generate();
             appendMessage('ai', result, 'image');
         } else {
+            // Text Logic using OpenAI
             result = await coco.txt.prompt(prompt).set.model('openai').generate();
             appendMessage('ai', result, 'text');
         }
     } catch (err) {
-        appendMessage('ai', "🥥 Error: CoCo lost its connection to the tree!");
+        appendMessage('ai', "🥥 CoCo hit a snag! Please try that again.");
+        console.error(err);
     } finally {
         loader.classList.add('hidden');
-        input.focus(); // Keep the cursor in the box for the next message
+        statusDot.classList.remove('active');
+        statusText.innerText = "Ready";
+        input.focus(); // Returns cursor to the box automatically
     }
 }
 
@@ -51,11 +58,14 @@ function appendMessage(sender, content, type = 'text') {
     }
     
     chat.appendChild(msg);
-    chat.scrollTop = chat.scrollHeight;
+    chat.scrollTop = chat.scrollHeight; // Auto-scroll to bottom
 }
 
+// Click and Enter listeners
 btn.onclick = handleAction;
-input.onkeydown = (e) => e.key === 'Enter' && handleAction();
+input.onkeydown = (e) => {
+    if (e.key === 'Enter') handleAction();
+};
 
-// Final check: make sure the box is ready when page loads
+// Initial focus so you can type immediately
 window.onload = () => input.focus();
