@@ -1,0 +1,21 @@
+{
+  "name": "CoCo AI ",
+  "short_name": "CoCoAI",
+  "description": "Your new AI Companion",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#8bc34a",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/Seigh-sword/Free-AI-For-All/refs/heads/main/assets/CoCoAiIcon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/Seigh-sword/Free-AI-For-All/refs/heads/main/assets/CoCoAiIcon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
