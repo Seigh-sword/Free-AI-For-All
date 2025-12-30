@@ -6,6 +6,16 @@
     <title>CoCo AI</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Seigh-sword/Free-AI-For-All/refs/heads/main/assets/CoCoAiIcon.png">
     <link rel="stylesheet" href="webpage/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#8bc34a">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Seigh-sword/Free-AI-For-All/refs/heads/main/assets/CoCoAiIcon.png">
+
+<script>
+  // Register the Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
+</script>
 </head>
 <body>
 
